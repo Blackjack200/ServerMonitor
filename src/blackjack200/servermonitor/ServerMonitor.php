@@ -33,12 +33,26 @@ class ServerMonitor extends PluginBase implements Listener {
 		$this->getScheduler()->scheduleRepeatingTask(new ClosureTask(static function () : void {
 			$TPS = Server::getInstance()->getTicksPerSecond();
 			if ($TPS !== 20.0) {
-				ServerMonitor::getInstance()->TPSLogger->write((string) $TPS);
+				$player = count(Server::getInstance()->getOnlinePlayers());
+				$worlds = Server::getInstance()->getWorldManager()->getWorlds();
+				$buf = '';
+				foreach ($worlds as $world) {
+					$buf .= sprintf('W_%s=%s ', $world->getFolderName(), $world->getTickRateTime());
+				}
+				$buf = substr($buf, 0, -1);
+				ServerMonitor::getInstance()->TPSLogger->write("TPS=$TPS PLAYER=$player $buf");
 			}
 		}), 20);
 		$this->errorLogger = new LogThread(Path::join($path, 'error.log'));
 		$this->errorLogger->start();
-		Server::getInstance()->getLogger()->addAttachment(new ServerErrorMonitor());
+		$attachment = new ErrorLoggerAttachment();
+		$this->getScheduler()->scheduleRepeatingTask(new ClosureTask(static function () use ($attachment) : void {
+			$buf = $attachment->getBuffer();
+			while ($buf->count() > 0) {
+				ServerMonitor::getInstance()->errorLogger->write($buf->pop());
+			}
+		}), 40);
+		Server::getInstance()->getLogger()->addAttachment($attachment);
 	}
 
 	protected function onDisable() : void {

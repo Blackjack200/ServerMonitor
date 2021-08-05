@@ -12,9 +12,11 @@ class LogThread extends Thread {
 	private string $logFile;
 	private Threaded $buffer;
 	private bool $running;
+	private bool $timestamp;
 
-	public function __construct(string $file) {
+	public function __construct(string $file, bool $timestamp = true) {
 		$this->logFile = $file;
+		$this->timestamp = $timestamp;
 		$this->buffer = new Threaded();
 		touch($this->logFile);
 	}
@@ -34,7 +36,7 @@ class LogThread extends Thread {
 	}
 
 	public function write(string $buffer) : void {
-		$this->buffer[] = sprintf("[%s]: %s\n", (string) time(), $buffer);
+		$this->buffer[] = $buffer;
 		$this->notify();
 	}
 
@@ -62,7 +64,11 @@ class LogThread extends Thread {
 		while ($this->buffer->count() > 0) {
 			/** @var string $line */
 			$line = $this->buffer->pop();
+			if ($this->timestamp) {
+				$line = sprintf("[%s]: %s", date('H:i:s.v'), $line);
+			}
 			fwrite($stream, $line);
+			fwrite($stream, "\n");
 		}
 	}
 }
