@@ -43,7 +43,7 @@ class ServerMonitor extends PluginBase implements Listener {
 				ServerMonitor::getInstance()->TPSLogger->write("TPS=$TPS PLAYER=$player $buf");
 			}
 		}), 20);
-		$this->errorLogger = new LogThread(Path::join($path, 'error.log'));
+		$this->errorLogger = new LogThread(Path::join($path, 'error.log'), false);
 		$this->errorLogger->start();
 		$attachment = new ErrorLoggerAttachment();
 		$this->getScheduler()->scheduleRepeatingTask(new ClosureTask(static function () use ($attachment) : void {
