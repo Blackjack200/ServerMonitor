@@ -4,35 +4,20 @@
 namespace blackjack200\servermonitor;
 
 
+use pmmp\thread\ThreadSafeArray;
 use pocketmine\thread\Thread;
 use RuntimeException;
-use Threaded;
 
 class LogThread extends Thread {
 	private string $logFile;
-	private Threaded $buffer;
-	private bool $running;
+	private ThreadSafeArray $buffer;
 	private bool $timestamp;
 
 	public function __construct(string $file, bool $timestamp = true) {
 		$this->logFile = $file;
 		$this->timestamp = $timestamp;
-		$this->buffer = new Threaded();
+		$this->buffer = new ThreadSafeArray();
 		touch($this->logFile);
-	}
-
-	public function registerClassLoaders() : void {
-	}
-
-	public function start(int $options = PTHREADS_INHERIT_ALL) : bool {
-		$this->running = true;
-		return parent::start($options);
-	}
-
-	public function shutdown() : void {
-		$this->synchronized(function () {
-			$this->running = false;
-		});
 	}
 
 	public function write(string $buffer) : void {
@@ -45,10 +30,10 @@ class LogThread extends Thread {
 		if (!is_resource($logResource)) {
 			throw new RuntimeException('Cannot open log file');
 		}
-		while ($this->running) {
+		while (!$this->isKilled) {
 			$this->writeStream($logResource);
 			$this->synchronized(function () {
-				if ($this->running) {
+				if (!$this->isKilled) {
 					$this->wait();
 				}
 			});

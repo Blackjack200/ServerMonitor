@@ -5,15 +5,15 @@ namespace blackjack200\servermonitor;
 
 
 use LogLevel;
+use pmmp\thread\ThreadSafeArray;
+use pocketmine\thread\log\ThreadSafeLoggerAttachment;
 use pocketmine\utils\TextFormat;
-use Threaded;
-use ThreadedLoggerAttachment;
 
-class ErrorLoggerAttachment extends ThreadedLoggerAttachment {
-	private Threaded $buffer;
+class ErrorLoggerAttachment extends ThreadSafeLoggerAttachment {
+	private ThreadSafeArray $buffer;
 
 	public function __construct() {
-		$this->buffer = new Threaded();
+		$this->buffer = new ThreadSafeArray();
 	}
 
 	public function log($level, $message) : void {
@@ -22,7 +22,7 @@ class ErrorLoggerAttachment extends ThreadedLoggerAttachment {
 		}
 	}
 
-	public function getBuffer() : Threaded {
+	public function getBuffer() : ThreadSafeArray {
 		return $this->buffer;
 	}
 }

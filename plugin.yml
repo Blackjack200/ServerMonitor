@@ -1,5 +1,5 @@
 name: ServerMonitor
 version: 0.0.2
-api: 4.0.0
+api: 5.0.0
 author: Blackjack200
 main: blackjack200\servermonitor\ServerMonitor

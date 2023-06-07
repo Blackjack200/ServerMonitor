@@ -9,7 +9,7 @@ use pocketmine\event\server\CommandEvent;
 use pocketmine\plugin\PluginBase;
 use pocketmine\scheduler\ClosureTask;
 use pocketmine\Server;
-use Webmozart\PathUtil\Path;
+use Symfony\Component\Filesystem\Path;
 
 class ServerMonitor extends PluginBase implements Listener {
 	private static self $instance;
@@ -56,9 +56,9 @@ class ServerMonitor extends PluginBase implements Listener {
 	}
 
 	protected function onDisable() : void {
-		$this->commandLogger->shutdown();
-		$this->TPSLogger->shutdown();
-		$this->errorLogger->shutdown();
+		$this->commandLogger->quit();
+		$this->TPSLogger->quit();
+		$this->errorLogger->quit();
 	}
 
 	public function onCommandEvent(CommandEvent $event) : void {
