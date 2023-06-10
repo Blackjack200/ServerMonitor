@@ -50,7 +50,7 @@ class LogThread extends Thread {
 			/** @var string $line */
 			$line = $this->buffer->pop();
 			if ($this->timestamp) {
-				$line = sprintf("[%s]: %s", date('H:i:s.v'), $line);
+				$line = sprintf("[%s]: %s", date('Y-n-j_H.i.s'), $line);
 			}
 			fwrite($stream, $line);
 			fwrite($stream, "\n");

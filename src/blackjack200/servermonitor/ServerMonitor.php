@@ -4,11 +4,13 @@
 namespace blackjack200\servermonitor;
 
 
+use pocketmine\console\ConsoleCommandSender;
 use pocketmine\event\Listener;
 use pocketmine\event\server\CommandEvent;
 use pocketmine\plugin\PluginBase;
 use pocketmine\scheduler\ClosureTask;
 use pocketmine\Server;
+use pocketmine\timings\TimingsHandler;
 use Symfony\Component\Filesystem\Path;
 
 class ServerMonitor extends PluginBase implements Listener {
@@ -30,7 +32,7 @@ class ServerMonitor extends PluginBase implements Listener {
 		$this->commandLogger->start();
 		$this->TPSLogger = new LogThread(Path::join($path, 'TPS.log'));
 		$this->TPSLogger->start();
-		$this->getScheduler()->scheduleRepeatingTask(new ClosureTask(static function () : void {
+		$this->getScheduler()->scheduleRepeatingTask(new ClosureTask(static function() : void {
 			$TPS = Server::getInstance()->getTicksPerSecond();
 			if ($TPS !== 20.0) {
 				$player = count(Server::getInstance()->getOnlinePlayers());
@@ -40,13 +42,14 @@ class ServerMonitor extends PluginBase implements Listener {
 					$buf .= sprintf('W_%s=%s ', $world->getFolderName(), $world->getTickRateTime());
 				}
 				$buf = substr($buf, 0, -1);
+				TimingsHandler::setEnabled();
 				ServerMonitor::getInstance()->TPSLogger->write("TPS=$TPS PLAYER=$player $buf");
 			}
 		}), 20);
 		$this->errorLogger = new LogThread(Path::join($path, 'error.log'), false);
 		$this->errorLogger->start();
 		$attachment = new ErrorLoggerAttachment();
-		$this->getScheduler()->scheduleRepeatingTask(new ClosureTask(static function () use ($attachment) : void {
+		$this->getScheduler()->scheduleRepeatingTask(new ClosureTask(static function() use ($attachment) : void {
 			$buf = $attachment->getBuffer();
 			while ($buf->count() > 0) {
 				ServerMonitor::getInstance()->errorLogger->write($buf->pop());
