@@ -4,7 +4,6 @@
 namespace blackjack200\servermonitor;
 
 
-use pocketmine\console\ConsoleCommandSender;
 use pocketmine\event\Listener;
 use pocketmine\event\server\CommandEvent;
 use pocketmine\plugin\PluginBase;
@@ -51,9 +50,11 @@ class ServerMonitor extends PluginBase implements Listener {
 		$attachment = new ErrorLoggerAttachment();
 		$this->getScheduler()->scheduleRepeatingTask(new ClosureTask(static function() use ($attachment) : void {
 			$buf = $attachment->getBuffer();
-			while ($buf->count() > 0) {
-				ServerMonitor::getInstance()->errorLogger->write($buf->pop());
-			}
+			$attachment->synchronized(function() use ($buf) : void {
+				while ($buf->count() > 0) {
+					ServerMonitor::getInstance()->errorLogger->write($buf->pop());
+				}
+			});
 		}), 40);
 		Server::getInstance()->getLogger()->addAttachment($attachment);
 	}

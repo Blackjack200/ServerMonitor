@@ -17,9 +17,11 @@ class ErrorLoggerAttachment extends ThreadSafeLoggerAttachment {
 	}
 
 	public function log($level, $message) : void {
-		if (in_array($level, [LogLevel::CRITICAL, LogLevel::EMERGENCY, LogLevel::ERROR, LogLevel::WARNING], true)) {
-			$this->buffer[] = TextFormat::clean($message);
-		}
+		$this->synchronized(function() use ($message, $level) {
+			if (in_array($level, [LogLevel::CRITICAL, LogLevel::EMERGENCY, LogLevel::ERROR, LogLevel::WARNING], true)) {
+				$this->buffer[] = TextFormat::clean($message);
+			}
+		});
 	}
 
 	public function getBuffer() : ThreadSafeArray {

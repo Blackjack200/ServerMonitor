@@ -21,8 +21,10 @@ class LogThread extends Thread {
 	}
 
 	public function write(string $buffer) : void {
-		$this->buffer[] = $buffer;
-		$this->notify();
+		$this->synchronized(function() use ($buffer) : void {
+			$this->buffer[] = $buffer;
+			$this->notify();
+		});
 	}
 
 	public function onRun() : void {
@@ -31,14 +33,18 @@ class LogThread extends Thread {
 			throw new RuntimeException('Cannot open log file');
 		}
 		while (!$this->isKilled) {
-			$this->writeStream($logResource);
-			$this->synchronized(function () {
+			$this->synchronized(function() use ($logResource) {
+				$this->writeStream($logResource);
+			});
+			$this->synchronized(function() {
 				if (!$this->isKilled) {
 					$this->wait();
 				}
 			});
 		}
-		$this->writeStream($logResource);
+		$this->synchronized(function() use ($logResource) {
+			$this->writeStream($logResource);
+		});
 		fclose($logResource);
 	}
 
