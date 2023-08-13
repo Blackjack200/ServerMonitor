@@ -41,7 +41,6 @@ class ServerMonitor extends PluginBase implements Listener {
 					$buf .= sprintf('W_%s=%s ', $world->getFolderName(), $world->getTickRateTime());
 				}
 				$buf = substr($buf, 0, -1);
-				TimingsHandler::setEnabled();
 				ServerMonitor::getInstance()->TPSLogger->write("TPS=$TPS PLAYER=$player $buf");
 			}
 		}), 20);
