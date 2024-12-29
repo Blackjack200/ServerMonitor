@@ -1,22 +1,21 @@
 <?php
-
+declare(strict_types=1);
 
 namespace blackjack200\servermonitor;
 
-
+use pmmp\thread\ThreadSafeArray;
 use pocketmine\event\Listener;
 use pocketmine\event\server\CommandEvent;
 use pocketmine\plugin\PluginBase;
 use pocketmine\scheduler\ClosureTask;
 use pocketmine\Server;
-use pocketmine\timings\TimingsHandler;
 use Symfony\Component\Filesystem\Path;
 
 class ServerMonitor extends PluginBase implements Listener {
 	private static self $instance;
-	public LogThread $TPSLogger;
-	public LogThread $commandLogger;
-	public LogThread $errorLogger;
+	public AwaitLogger $TPSLogger;
+	public AwaitLogger $commandLogger;
+	public AwaitLogger $errorLogger;
 
 	public static function getInstance() : self {
 		return self::$instance;
@@ -27,42 +26,32 @@ class ServerMonitor extends PluginBase implements Listener {
 		$this->getServer()->getPluginManager()->registerEvents($this, $this);
 		$path = Path::join($this->getServer()->getDataPath(), 'monitor');
 		@mkdir($path);
-		$this->commandLogger = new LogThread(Path::join($path, 'command.log'));
-		$this->commandLogger->start();
-		$this->TPSLogger = new LogThread(Path::join($path, 'TPS.log'));
-		$this->TPSLogger->start();
+
+		$this->commandLogger = new AwaitLogger(Path::join($path, 'command.log'));
+		$this->TPSLogger = new AwaitLogger(Path::join($path, 'TPS.log'));
+		$this->errorLogger = new AwaitLogger(Path::join($path, 'error.log'));
+
 		$this->getScheduler()->scheduleRepeatingTask(new ClosureTask(static function() : void {
 			$TPS = Server::getInstance()->getTicksPerSecond();
 			if ($TPS !== 20.0) {
 				$player = count(Server::getInstance()->getOnlinePlayers());
-				$worlds = Server::getInstance()->getWorldManager()->getWorlds();
-				$buf = '';
-				foreach ($worlds as $world) {
-					$buf .= sprintf('W_%s=%s ', $world->getFolderName(), $world->getTickRateTime());
-				}
-				$buf = substr($buf, 0, -1);
-				ServerMonitor::getInstance()->TPSLogger->write("TPS=$TPS PLAYER=$player $buf");
+				ServerMonitor::getInstance()->TPSLogger->write("TPS=$TPS PLAYER=$player");
 			}
 		}), 20);
-		$this->errorLogger = new LogThread(Path::join($path, 'error.log'), false);
-		$this->errorLogger->start();
-		$attachment = new ErrorLoggerAttachment();
-		$this->getScheduler()->scheduleRepeatingTask(new ClosureTask(static function() use ($attachment) : void {
-			$buf = $attachment->getBuffer();
-			$attachment->synchronized(function() use ($buf) : void {
-				while ($buf->count() > 0) {
-					ServerMonitor::getInstance()->errorLogger->write($buf->pop());
+
+
+		$buf = new ThreadSafeArray();
+		$notifier = $this->getServer()->getTickSleeper()->addNotifier(function() use ($buf) {
+			$buf->synchronized(function() use ($buf) : void {
+				while (($line = $buf->shift()) !== null) {
+					$this->errorLogger->write($line);
 				}
 			});
-		}), 40);
-		Server::getInstance()->getLogger()->addAttachment($attachment);
+		});
+		Server::getInstance()->getLogger()->addAttachment(new ErrorLoggerAttachment($buf, $notifier));
 	}
 
-	protected function onDisable() : void {
-		$this->commandLogger->quit();
-		$this->TPSLogger->quit();
-		$this->errorLogger->quit();
-	}
+	protected function onDisable() : void { }
 
 	public function onCommandEvent(CommandEvent $event) : void {
 		$this->commandLogger->write("SENDER={$event->getSender()->getName()} COMMAND={$event->getCommand()}");
